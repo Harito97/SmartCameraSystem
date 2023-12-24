@@ -1,0 +1,3 @@
+Bài toán MCMO_Detect
+    |___Bài toán reid để nhận diện 1 nhóm người từ 2 camera quay vào nhóm người đó
+    |       |___Bài toán 
