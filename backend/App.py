@@ -12,7 +12,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 class App:
     def __init__(self):
         print("Setting YOLO model for detect ...")
-        self.yolo_model = YOLO('yolov8x.pt')
+        # self.yolo_model = YOLO('yolov8x.pt')
+        self.yolo_model = YOLO('yolov8n.pt')
         print("Setting reid model: resnet50 ...") 
         # self.reid_model = models.resnet50(pretrained=True) # older way in older version of the library
         self.reid_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT) 
