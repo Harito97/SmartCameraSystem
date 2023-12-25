@@ -114,8 +114,9 @@ class App:
         # for r in results:
         r = results[0]
         im_array = r.plot()  # plot a BGR numpy array of predictions
+        
         im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
-        im.show()  # show image
+        # im.show()  # show image
         # im.save('results.jpg')  # save image
         return im
 
@@ -170,6 +171,8 @@ class App:
             img1 = Image.open("/path/to/img").convert('RGB')
             is_same = same_object(img1, resnet_model)
         """
+        if image1 is None or image2 is None:
+            return False
         feature1 = self.__extract_features(image1)
         feature2 = self.__extract_features(image2)
         return self.__reid_similar(feature1, feature2, threshold)

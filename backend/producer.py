@@ -27,24 +27,28 @@ def main():
     bootstrap_servers = 'localhost:9092'
     producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
                              api_version=(0, 10, 1))    
-
-    # Create and run Kafka producer for topic 1 in a separate thread
+    print('Created producer')
+    
     topic1 = 'Cam1'
-    video_path1 = 'roads.mp4'
+    video_path1 = '/home/harito/Videos/Cam1.mkv'
     producer_thread1 = threading.Thread(target=public_video_to_kafka,
                                         args=(producer, topic1, video_path1))
-    producer_thread1.start()
-
-    # Create and run Kafka producer for topic 2 in a separate thread
+    print('Started topic1: Cam1')
     topic2 = 'Cam2'
-    video_path2 = 'roads.mp4'
+    video_path2 = '/home/harito/Videos/Cam2.webm'
     producer_thread2 = threading.Thread(target=public_video_to_kafka,
                                         args=(producer, topic2, video_path2))
-    producer_thread2.start()
+    print('Started topic2: Cam2')
 
+    producer_thread1.start()
+    print('Sending data to topic1: Cam1')
+    producer_thread2.start()
+    print('Sending data to topic2: Cam2')
+    
     producer_thread1.join()
     producer_thread2.join()
 
+    print('All done!')
     # bootstrap_servers = 'localhost:9092'
     # producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
     #                          api_version=(0, 10, 1)) 
