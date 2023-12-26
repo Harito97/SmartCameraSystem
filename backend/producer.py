@@ -49,12 +49,6 @@ def main():
     producer_thread2.join()
 
     print('All done!')
-    # bootstrap_servers = 'localhost:9092'
-    # producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
-    #                          api_version=(0, 10, 1)) 
-    # topic2 = 'topicb'
-    # video_path2 = 'roads.mp4'
-    # public_video_to_kafka(producer, topic2, video_path2)
 
 if __name__ == "__main__":
     main()

@@ -83,7 +83,7 @@ class App:
     def detect_objects(self, image):
         """
         Para:
-            image: PIL Image - be convert('RGB') yet
+            image: PIL Image - be convert('RGB') yet or np.ndarray
         Result:
             object_images: a list of single object image detect crop from bounding box 
             results: the engine.results.Results after going through the YOLO model 
@@ -105,7 +105,16 @@ class App:
             ymin = int(y_center - height / 2)
             xmax = int(x_center + width / 2)
             ymax = int(y_center + height / 2)
-            object_image = image.crop((xmin, ymin, xmax, ymax))
+            # Kiểm tra loại dữ liệu của object_image
+            if isinstance(image, Image.Image):
+                # Nếu object_image là PIL.Image.Image
+                object_image = image.crop((xmin, ymin, xmax, ymax))
+            elif isinstance(image, np.ndarray):
+                # Nếu object_image là numpy.ndarray
+                object_image = image[ymin:ymax, xmin:xmax, :]
+            else:
+                # Nếu không phải kiểu dữ liệu mong đợi, raise TypeError
+                raise TypeError("Unsupported object_image type")
             object_images.append(object_image)
 
         return object_images, results
@@ -125,6 +134,8 @@ class App:
         """
         Para:
             image: PIL Image - picture of a single object be convert('RGB') yet
+            or 
+            // image: np.ndarray - 3D array representing an RGB image
         Result:
             object_images: a list of single object image detect crop from bounding box 
 
@@ -134,17 +145,29 @@ class App:
             img1 = Image.open("/path/to/img").convert('RGB')
             features1 = extract_features(img1, resnet_model)
         """
+        # preprocess = transforms.Compose([
+        #     transforms.Resize((256, 256)),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        # ])
+
+        # input_tensor = preprocess(image)
+        # input_tensor = torch.unsqueeze(input_tensor, 0)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Chuyển định dạng màu BGR sang RGB
+
+        # Bước 2: Chuyển đổi ảnh thành tensor và tiền xử lý
         preprocess = transforms.Compose([
-            transforms.Resize((256, 256)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.ToTensor(),  # Chuyển đổi thành tensor
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Tiền xử lý chuẩn hóa
         ])
 
         input_tensor = preprocess(image)
-        input_batch = torch.unsqueeze(input_tensor, 0)
+        input_tensor = input_tensor.unsqueeze(0)  # Thêm chiều batch
 
         with torch.no_grad():
-            output = self.reid_model(input_batch)
+            # output = self.reid_model(input_tensor)
+            output = self.reid_model.forward(input_tensor)
 
         if len(output) == 0:
             return None
@@ -208,19 +231,21 @@ class App:
 
     def __draw_boxes_with_names(self, image, face_locations, face_names):
         """ 
+        image is numpy array picture
         Draw bounding box in the picture
         """
         # Convert PIL Image to NumPy array
-        image_np = np.array(image)
+        # image_np = np.array(image)
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             # Draw bounding box
-            cv2.rectangle(image_np, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
 
             # Draw name 
             font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(image_np, name, (left + 6, bottom - 6), font, 1, (255, 255, 255), 1)
+            cv2.putText(image, name, (left + 6, bottom - 6), font, 1, (255, 255, 255), 1)
         # Convert the modified NumPy array back to a PIL Image
-        return Image.fromarray(image_np)
+        # return Image.fromarray(image)
+        return image
 
     def face_similar(self, image, tolerance=0.6):
         """ 
@@ -231,8 +256,8 @@ class App:
         :return: True if the face be detect in database, False if not  
         """
         # Convert PIL Image to NumPy array (PIL Image already be converted to 'RGB' mode)
-        image_np = np.array(image) 
-        face_to_check = self.__face_rec(image_np)
+        # image_np = np.array(image) 
+        face_to_check = self.__face_rec(image)
         if face_to_check is None:
             return False 
         for name, vector in self.face_db_regis.items():

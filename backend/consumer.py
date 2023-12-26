@@ -46,13 +46,13 @@ def main():
             print('Get a message from topic2')
             output2 = app.detect_objects(pil_image)
 
-        same_object = []
+        # same_object = []
         if output1 is not None and output2 is not None:
-            for object_image1 in output1[0]:
-                for object_image2 in output2[0]:
-                    if app.same_object(object_image1, object_image2):
-                        print('Have a pair same object')
-                        same_object.append((object_image1, object_image2))
+            # for object_image1 in output1[0]:
+            #     for object_image2 in output2[0]:
+            #         if app.same_object(object_image1, object_image2):
+            #             print('Have a pair same object')
+            #             same_object.append((object_image1, object_image2))
             # Show Cam1 and Cam2
             frame1 = cv2.cvtColor(np.array(app.draw_picture_detect(output1[1])), cv2.COLOR_RGB2BGR)
             cv2.imshow('Cam1', frame1)
@@ -64,7 +64,6 @@ def main():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
     cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     main()
