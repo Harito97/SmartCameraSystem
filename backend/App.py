@@ -14,14 +14,14 @@ class App:
         print("Setting YOLO model for detect ...")
         # self.yolo_model = YOLO('yolov8x.pt')
         self.yolo_model = YOLO('yolov8n.pt')
-        print("Setting reid model: resnet50 ...") 
+        # print("Setting reid model: resnet50 ...") 
         # self.reid_model = models.resnet50(pretrained=True) # older way in older version of the library
-        self.reid_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT) 
-        self.reid_model.eval() 
+        # self.reid_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT) 
+        # self.reid_model.eval()
+        print("Set reid with histogram") 
         print("Setting the dictionary {name: vector feature} from load_data_base() ...")
-        self.face_db_regis = {}
-        App.load_data_base("database/face_dictionary.txt", self.face_db_regis)
-        print("Setting face recognition model with face_recognition \nSetup done!")
+        self.face_db_regis = App.load_data_base("database/face_dictionary.txt")
+        print("Set face recognition model with face_recognition \nSetup done!")
 
     # Step 0: Load database 
     @staticmethod
@@ -85,7 +85,7 @@ class App:
         Para:
             image: PIL Image - be convert('RGB') yet or np.ndarray
         Result:
-            object_images: a list of single object image detect crop from bounding box 
+            object_images: a list of single object (only person) image detect crop from bounding box 
             results: the engine.results.Results after going through the YOLO model 
         How to use - Eg without OOP:
             from ultralytics import YOLO 
@@ -96,26 +96,29 @@ class App:
         # Use YOLO to determine the regions containing objects
         results = self.yolo_model(image)
         # Get information about objects and bounding boxes
-        boxes = results[0].boxes.xywh   # tensor
+        # boxes = (results[0].boxes.cls, results[0].boxes.xywh)   # tensor
+        boxes = results[0].boxes
         # Cut and save the regions containing objects
         object_images = []
-        for box in boxes:
-            x_center, y_center, width, height = map(float, box)
-            xmin = int(x_center - width / 2)
-            ymin = int(y_center - height / 2)
-            xmax = int(x_center + width / 2)
-            ymax = int(y_center + height / 2)
-            # Kiểm tra loại dữ liệu của object_image
-            if isinstance(image, Image.Image):
-                # Nếu object_image là PIL.Image.Image
-                object_image = image.crop((xmin, ymin, xmax, ymax))
-            elif isinstance(image, np.ndarray):
-                # Nếu object_image là numpy.ndarray
-                object_image = image[ymin:ymax, xmin:xmax, :]
-            else:
-                # Nếu không phải kiểu dữ liệu mong đợi, raise TypeError
-                raise TypeError("Unsupported object_image type")
-            object_images.append(object_image)
+        for i in range(len(boxes)):
+            if boxes[i].cls.item() == 0.0:
+                data = boxes[i].xywh[0]
+                x_center, y_center, width, height = data[0].item(), data[1].item(), data[2].item(), data[3].item()
+                xmin = int(x_center - width / 2)
+                ymin = int(y_center - height / 2)
+                xmax = int(x_center + width / 2)
+                ymax = int(y_center + height / 2)
+                # Kiểm tra loại dữ liệu của object_image
+                if isinstance(image, np.ndarray):
+                    # Nếu object_image là numpy.ndarray
+                    object_image = image[ymin:ymax, xmin:xmax, :]
+                elif isinstance(image, Image.Image):
+                    # Nếu object_image là PIL.Image.Image
+                    object_image = image.crop((xmin, ymin, xmax, ymax))
+                else:
+                    # Nếu không phải kiểu dữ liệu mong đợi, raise TypeError
+                    raise TypeError("Unsupported object_image type")
+                object_images.append(object_image)
 
         return object_images, results
     
@@ -183,22 +186,46 @@ class App:
         """
         return cosine_similarity(features1, features2) >= threshold
 
-    def same_object(self, image1, image2, threshold = 0.8):
-        """
-        Para:
-            image1, image2: PIL Image - picture of a single object be convert('RGB') yet
-        Result:
-            True if 2 object in 2 picture is the same, False if not
+    # def same_object(self, image1, image2, threshold = 0.8):
+    #     """
+    #     Para:
+    #         image1, image2: PIL Image - picture of a single object be convert('RGB') yet
+    #     Result:
+    #         True if 2 object in 2 picture is the same, False if not
+    #     How to use - Eg without OOP: 
+    #         img1 = Image.open("/path/to/img").convert('RGB')
+    #         is_same = same_object(img1, resnet_model)
+    #     """
+    #     if image1 is None or image2 is None:
+    #         return False
+    #     feature1 = self.__extract_features(image1)
+    #     feature2 = self.__extract_features(image2)
+    #     return self.__reid_similar(feature1, feature2, threshold)
 
-        How to use - Eg without OOP: 
-            img1 = Image.open("/path/to/img").convert('RGB')
-            is_same = same_object(img1, resnet_model)
-        """
-        if image1 is None or image2 is None:
+    def same_object(self, img1, img2, threshold = 0.8):
+        # Đọc ảnh
+        # img1 = cv2.imread(img1)
+        # img2 = cv2.imread(img2)
+    
+        # Chuyển đổi ảnh sang không gian màu HSV
+        hsv1 = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
+        hsv2 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
+    
+        # Tính histogram của ảnh
+        hist1 = cv2.calcHist([hsv1], [0, 1], None, [180, 256], [0, 180, 0, 256])
+        hist2 = cv2.calcHist([hsv2], [0, 1], None, [180, 256], [0, 180, 0, 256])
+    
+        # Chuẩn hóa histogram
+        cv2.normalize(hist1, hist1, 0, 1, cv2.NORM_MINMAX)
+        cv2.normalize(hist2, hist2, 0, 1, cv2.NORM_MINMAX)
+    
+        # Tính độ tương đồng giữa hai histogram
+        similarity = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+    
+        if similarity > threshold:
+            return True
+        else:
             return False
-        feature1 = self.__extract_features(image1)
-        feature2 = self.__extract_features(image2)
-        return self.__reid_similar(feature1, feature2, threshold)
 
     # Step 3: Face recognition from each object crop and id by reid model 
     def __face_rec(self, image):
@@ -257,15 +284,16 @@ class App:
         """
         # Convert PIL Image to NumPy array (PIL Image already be converted to 'RGB' mode)
         # image_np = np.array(image) 
+        image = np.ascontiguousarray(image)
         face_to_check = self.__face_rec(image)
         if face_to_check is None:
-            return False 
+            return False, 'No face', image
         for name, vector in self.face_db_regis.items():
             # So sánh khuôn mặt trong ảnh với tất cả khuôn mặt trong cơ sở dữ liệu
             match = face_recognition.compare_faces([vector], face_to_check[1], tolerance=tolerance)[0]
 
             if match:
                 image = self.__draw_boxes_with_names(image, [face_to_check[0]], [name])
-                return image, True
+                return True, name, image
 
-        return image, False
+        return False, 'Unknown', image
