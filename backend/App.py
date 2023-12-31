@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
+from random import sample
 # from typing import overload
 
 class App:
@@ -24,7 +25,7 @@ class App:
         print("Set reid with histogram") 
         print("Setting the dictionary {name: vector feature} from load_data_base() ...")
         # self.face_db_regis = App.load_data_base("database/face_dictionary.txt")
-        self.face_db_regis = pickle.loads(open("database/face_dictionary.pkl", "rb").read())
+        self.face_db_regis = pickle.loads(open("database/face_dictionary_extra.pkl", "rb").read())
         print("Set face recognition model with face_recognition \nSetup done!")
 
     # Step 0: Load database 
