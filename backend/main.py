@@ -47,12 +47,13 @@ while cap1.isOpened() and cap2.isOpened():
             # ReID & Face recognition
             face_in_room = []
             for person1 in result1_detect[0]:
+                person1 = resize_image(person1)
                 person = [person1]
                 for person2 in result2_detect[0]:
                     if app.same_object(person1, person2):
-                        person.append(person2)
+                        person.append(resize_image(person2))
                 for per in person:
-                    print(per)
+                    # print(per)
                     data = app.face_similar(per)
                     if data[0]:
                         per = data[2]
@@ -63,8 +64,9 @@ while cap1.isOpened() and cap2.isOpened():
             
             end_point = len(face_in_room) if len(face_in_room) < 4 else 4
             for i in range(end_point):
-                list_frame[i] = resize_image(face_in_room[i][2]) if len(face_in_room[i]) == 3 else resize_image(face_in_room[i][1][0])
-            
+                # list_frame[i] = resize_image(face_in_room[i][2]) if len(face_in_room[i]) == 3 else resize_image(face_in_room[i][1][0])
+                list_frame[i] = face_in_room[i][2] if len(face_in_room[i]) == 3 else face_in_room[i][1][0]
+           
             reid_facerecog_frame = cv2.hconcat(list_frame)        
     
     cv2.imshow('Cam', cv2.vconcat([real_frame, detect_frame, reid_facerecog_frame]))

@@ -1,8 +1,10 @@
 from ultralytics import YOLO
+# from yolov5 import YOLOv5
 from ultralytics.engine.results import Results
 import torch
 from torchvision import models, transforms
 import face_recognition
+import pickle
 import cv2
 import numpy as np
 from PIL import Image
@@ -14,13 +16,15 @@ class App:
         print("Setting YOLO model for detect ...")
         # self.yolo_model = YOLO('yolov8x.pt')
         self.yolo_model = YOLO('yolov8n.pt')
+        # self.yolo_model = YOLOv5('crowdhuman_yolov5m.pt')
         # print("Setting reid model: resnet50 ...") 
         # self.reid_model = models.resnet50(pretrained=True) # older way in older version of the library
         # self.reid_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT) 
         # self.reid_model.eval()
         print("Set reid with histogram") 
         print("Setting the dictionary {name: vector feature} from load_data_base() ...")
-        self.face_db_regis = App.load_data_base("database/face_dictionary.txt")
+        # self.face_db_regis = App.load_data_base("database/face_dictionary.txt")
+        self.face_db_regis = pickle.loads(open("database/face_dictionary.pkl", "rb").read())
         print("Set face recognition model with face_recognition \nSetup done!")
 
     # Step 0: Load database 
@@ -186,8 +190,9 @@ class App:
         """
         return cosine_similarity(features1, features2) >= threshold
 
+    """
     # def same_object(self, image1, image2, threshold = 0.8):
-    #     """
+    #     ""
     #     Para:
     #         image1, image2: PIL Image - picture of a single object be convert('RGB') yet
     #     Result:
@@ -195,12 +200,13 @@ class App:
     #     How to use - Eg without OOP: 
     #         img1 = Image.open("/path/to/img").convert('RGB')
     #         is_same = same_object(img1, resnet_model)
-    #     """
+    #     ""
     #     if image1 is None or image2 is None:
     #         return False
     #     feature1 = self.__extract_features(image1)
     #     feature2 = self.__extract_features(image2)
     #     return self.__reid_similar(feature1, feature2, threshold)
+    """
 
     def same_object(self, img1, img2, threshold = 0.8):
         # Đọc ảnh
@@ -228,7 +234,7 @@ class App:
             return False
 
     # Step 3: Face recognition from each object crop and id by reid model 
-    def __face_rec(self, image):
+    def __face_rec(self, image:np.ndarray):
         """
         Note: image input should only have a object person 
         face_recognition_model: model be used (this case is import face_recognition)
@@ -256,25 +262,34 @@ class App:
         feature_vectors = face_recognition.face_encodings(image, bounding_boxes)
         return (bounding_boxes[0], feature_vectors[0])
 
-    def __draw_boxes_with_names(self, image, face_locations, face_names):
+    def __draw_boxes_with_names(self, image:np.ndarray, face_locations:list=None, face_names:list=None):
         """ 
         image is numpy array picture
         Draw bounding box in the picture
         """
         # Convert PIL Image to NumPy array
         # image_np = np.array(image)
+        font = cv2.FONT_HERSHEY_DUPLEX
+        if face_locations == None:
+            if face_names == None:
+                cv2.putText(image, 'No face', (6, 1400), font, 5, (255, 255, 255), 4)
+                return image 
+            cv2.putText(image, face_names[0], (6, 1400), font, 5, (255, 255, 255), 4)
+            return image 
+        if face_names == None:
+            cv2.putText(image, 'Unknown', (6, 1400), font, 5, (255, 255, 255), 4)
+            return image 
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             # Draw bounding box
-            cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 5)
 
             # Draw name 
-            font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(image, name, (left + 6, bottom - 6), font, 1, (255, 255, 255), 1)
+            cv2.putText(image, name, (left + 6, bottom - 6), font, 5, (255, 255, 255), 5)
         # Convert the modified NumPy array back to a PIL Image
         # return Image.fromarray(image)
         return image
 
-    def face_similar(self, image, tolerance=0.6):
+    def face_similar(self, image:np.ndarray, tolerance:float=0.6):
         """ 
         Check the only face in image is in database or not 
 
@@ -287,13 +302,30 @@ class App:
         image = np.ascontiguousarray(image)
         face_to_check = self.__face_rec(image)
         if face_to_check is None:
+            image = self.__draw_boxes_with_names(image)
             return False, 'No face', image
-        for name, vector in self.face_db_regis.items():
-            # So sánh khuôn mặt trong ảnh với tất cả khuôn mặt trong cơ sở dữ liệu
-            match = face_recognition.compare_faces([vector], face_to_check[1], tolerance=tolerance)[0]
+        # for name, vector in self.face_db_regis.items():
+        #     # So sánh khuôn mặt trong ảnh với tất cả khuôn mặt trong cơ sở dữ liệu
+        #     match = face_recognition.compare_faces([vector], face_to_check[1], tolerance=tolerance)[0]
 
-            if match:
-                image = self.__draw_boxes_with_names(image, [face_to_check[0]], [name])
-                return True, name, image
+        #     if match:
+        #         image = self.__draw_boxes_with_names(image, [face_to_check[0]], [name])
+        #         return True, name, image
 
-        return False, 'Unknown', image
+        matches = face_recognition.compare_faces(self.face_db_regis["encodings"], face_to_check[1], tolerance)
+        if True in matches:
+            matchedIdxs = [i for (i, b) in enumerate(matches) if b]
+            counts = {}
+
+            for i in matchedIdxs:
+                name = self.face_db_regis["names"][i]
+                counts[name] = counts.get(name, 0) + 1
+
+            name = max(counts, key=counts.get)
+            image = self.__draw_boxes_with_names(image, [face_to_check[0]], [name])
+            return True, name, image
+        else:
+            image = self.__draw_boxes_with_names(image, [face_to_check[0]])
+            return False, 'Unknown', image
+    
+    
