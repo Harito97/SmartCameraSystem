@@ -2,6 +2,16 @@ from App import App
 import cv2
 import numpy as np
 
+class List:
+    def __init__(self):
+        self.data = []
+    
+    def add(self, ele):
+        if len(self.data) <= 4:
+            self.data.insert(0, ele)
+        else:
+            self.data = [ele] + self.data[0:3]
+    
 class Main:
     def __init__(self, cam1:str='/home/harito/Videos/Cam1.mp4', cam2:str='/home/harito/Videos/Cam2.mp4'):
         self.app = App()
@@ -14,7 +24,10 @@ class Main:
         reid_dict = {}
         loaded_data = np.load('database/histograms.npz')
         for key in loaded_data.files:
-            reid_dict[key] = loaded_data[key]
+            data = List()
+            data.add(loaded_data[key][0])
+            data.add(loaded_data[key][1])
+            reid_dict[key] = data
         return reid_dict
     
     @staticmethod
@@ -43,6 +56,7 @@ class Main:
         # #######################################
         terminal_frame = Main.black_frame(1440, 2560)
         list_frame = [Main.black_frame(1440, 640)] * 8
+        reid_picture = {'Hai': List(), 'Duc': List(), 'DucAnh': List(), 'Thang': List()}
         i = 0
         while self.cap1.isOpened() and self.cap2.isOpened():
             ret1, frame1 = self.cap1.read()
@@ -56,7 +70,8 @@ class Main:
             if i % 24 == 0:
                 # Detect
                 result1_detect, result2_detect, detect_frame = self.detect(frame1, frame2) 
-                
+                for per1, per2 in zip(result1_detect, result2_detect):
+                    pass 
              
             cv2.imshow('Cam', cv2.hconcat([cv2.vconcat([real_frame, detect_frame]), terminal_frame]))
             i += 1
