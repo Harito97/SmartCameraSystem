@@ -54,35 +54,6 @@ class App:
                     face_encoding = np.array(eval(face_encoding_str))  # Sử dụng eval để chuyển đổi chuỗi thành list
                     face_db_regis[person_name.strip()] = face_encoding
             return face_db_regis
-    
-    # @overload
-    # @staticmethod
-    # def load_data_base(face_db_regis: dict, new_db: str):
-    #     """ 
-    #     Load new database about face user 
-    #     Attribute dict{name (str): vector feature of the face with that name (numpy array from face_recognition.face_encodings)}
-    #     """
-    #     with open(new_db, "r") as file:
-    #         lines = file.readlines()
-    #         for line in lines:
-    #             person_name, face_encoding_str = line.split(":")
-    #             face_encoding = np.array(eval(face_encoding_str))  # Sử dụng eval để chuyển đổi chuỗi thành list
-    #             face_db_regis[person_name.strip()] = face_encoding
-
-    # @overload
-    # @staticmethod
-    # def load_data_base(new_db: str):
-    #     """ 
-    #     Return dict{name (str): vector feature of the face with that name (numpy array from face_recognition.face_encodings)}
-    #     """
-    #     read_face_dict = {}
-    #     with open(new_db, "r") as file:
-    #         lines = file.readlines()
-    #         for line in lines:
-    #             person_name, face_encoding_str = line.split(":")
-    #             face_encoding = np.array(eval(face_encoding_str))  # Sử dụng eval để chuyển đổi chuỗi thành list
-    #             read_face_dict[person_name.strip()] = face_encoding
-    #     return read_face_dict
 
     # Step 1: Detect object with YOLO 
     def detect_objects(self, image):
@@ -101,7 +72,6 @@ class App:
         # Use YOLO to determine the regions containing objects
         results = self.yolo_model(image)
         # Get information about objects and bounding boxes
-        # boxes = (results[0].boxes.cls, results[0].boxes.xywh)   # tensor
         boxes = results[0].boxes
         # Cut and save the regions containing objects
         object_images = []
@@ -208,9 +178,12 @@ class App:
     #     feature2 = self.__extract_features(image2)
     #     return self.__reid_similar(feature1, feature2, threshold)
     """
+    def extract_features(self, img):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+        return cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
 
     def same_object(self, img1, img2, threshold = 0.8):
-        # Đọc ảnh
         # img1 = cv2.imread(img1)
         # img2 = cv2.imread(img2)
     
@@ -328,5 +301,4 @@ class App:
         else:
             image = self.__draw_boxes_with_names(image, [face_to_check[0]])
             return False, 'Unknown', image
-    
     

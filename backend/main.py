@@ -17,6 +17,7 @@ height = 1440
 width = 640
 # Tạo một hình ảnh màu đen
 black_image = np.zeros((height, width, 3), dtype=np.uint8)
+terminal_frame = np.zeros((1440, 2560, 3), dtype=np.uint8)
 
 # ########################################################
 # Hàm để thay đổi kích thước ảnh để chúng có kích thước giống nhau
@@ -25,7 +26,7 @@ def resize_image(image, target_height=1440, target_width=640):
     return resized_img
 
 i = 0
-list_frame = [black_image] * 4
+list_frame = [black_image] * 8
 while cap1.isOpened() and cap2.isOpened():
     ret1, frame1 = cap1.read()
     ret2, frame2 = cap2.read()
@@ -62,14 +63,14 @@ while cap1.isOpened() and cap2.isOpened():
                     else:
                         face_in_room.append(('Unknown', person))
             
-            end_point = len(face_in_room) if len(face_in_room) < 4 else 4
-            for i in range(end_point):
+            end_point = len(face_in_room) if len(face_in_room) < 8 else 8
+            for j in range(end_point):
                 # list_frame[i] = resize_image(face_in_room[i][2]) if len(face_in_room[i]) == 3 else resize_image(face_in_room[i][1][0])
-                list_frame[i] = face_in_room[i][2] if len(face_in_room[i]) == 3 else face_in_room[i][1][0]
+                list_frame[j] = face_in_room[j][2] if len(face_in_room[j]) == 3 else face_in_room[j][1][0]
            
             reid_facerecog_frame = cv2.hconcat(list_frame)        
     
-    cv2.imshow('Cam', cv2.vconcat([real_frame, detect_frame, reid_facerecog_frame]))
+    cv2.imshow('Cam', cv2.vconcat([cv2.hconcat([cv2.vconcat([real_frame, detect_frame]), terminal_frame]), reid_facerecog_frame]))
     i += 1
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
