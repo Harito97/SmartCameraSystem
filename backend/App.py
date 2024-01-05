@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from random import sample
+import torchreid
 # from typing import overload
 
 class App:
